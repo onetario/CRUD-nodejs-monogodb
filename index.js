@@ -11,7 +11,6 @@ con.on("open", () => {
 con.on("error", () => {
   console.log("error in connecting...");
 });
-
 app.use(express.json());
 const router = require("./routes");
 app.use("/api", router);

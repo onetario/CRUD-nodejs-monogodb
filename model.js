@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 const workerSchema = new mongoose.Schema(
   {
+    _id: {
+      type: String,
+      required: true,
+    },
     name: {
       type: String,
       required: true,
@@ -15,7 +19,7 @@ const workerSchema = new mongoose.Schema(
     },
     wages: {
       type: Number,
-      required: true,
+      // required: true,
     },
   },
   {
@@ -23,4 +27,5 @@ const workerSchema = new mongoose.Schema(
     strict: false,
   }
 );
+
 module.exports = mongoose.model("Worker", workerSchema);

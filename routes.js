@@ -1,30 +1,45 @@
 const express = require("express");
 const router = express.Router();
 const Worker = require("./model");
+const { v4: uuidv4 } = require("uuid");
 router.get("/getWorkerDetail", async (req, res) => {
-  const { page = 1, limit=4 } = req.query;
+  const { page = 1, limit = 5, search, country } = req.query;
   try {
-    const workers = await Worker.find()
-      .limit(limit * 1)
+    const grouping = [];
+    const filter = {};
+    if (search) {
+      filter.position = { $regex: new RegExp(search, "i") };
+    }
+    if (country) {
+      grouping.push({ $match: { country: country } });
+    }
+    grouping.push({
+      $group: {
+        _id: "$country",
+        count: { $sum: 1 },
+        workers: { $push: "$$ROOT" },
+      },
+    });
+    const workers = await Worker.aggregate(grouping)
+      .sort({ _id: 1 })
       .skip((page - 1) * limit)
-      .exec();
+      .limit(limit);
 
-    const counts = await Worker.count();
-    console.log(Math.ceil(counts / limit));
-    
+    const counts = await Worker.countDocuments(filter);
+    const totalWorkers = await Worker.aggregate(grouping).count("count");
     res.json({
       statusCode: 200,
       data: workers,
-      PageSize: Math.ceil(counts / limit),
+      PageSize: Math.ceil(totalWorkers[0].count / limit),
       PageNumber: page,
       successMessage: "Worker's Details fetched successfully",
     });
-    const count = await Worker.countDocuments({});
-    console.log(count);
   } catch (error) {
     res.send("error");
   }
 });
+
+
 router.get("/getWorkerDetail/:id", async (req, res) => {
   try {
     const workers = await Worker.findById(req.params.id);
@@ -33,20 +48,21 @@ router.get("/getWorkerDetail/:id", async (req, res) => {
     res.send("error");
   }
 });
+
 router.post("/postWorkerDetail", async (req, res) => {
   const workerPost = new Worker({
-    name: req.body.name,
-    country: req.body.country,
-    position: req.body.position,
-    wages: req.body.wages,
+    _id: uuidv4(),
+    ...req.body, // Spread the request body to include any additional properties not defined in the schema
   });
   try {
     const workerSave = await workerPost.save();
     res.json(workerSave);
   } catch (error) {
     res.send("error");
+    console.log(error);
   }
 });
+
 router.patch("/patchWorkerDetail/:id", async (req, res) => {
   try {
     const workers = await Worker.findById(req.params.id);
@@ -59,6 +75,20 @@ router.patch("/patchWorkerDetail/:id", async (req, res) => {
     res.send("error");
   }
 });
+router.put("/updateWorkerDetail/:id", async (req, res) => {
+  const { name, country, position, wages } = req.body;
+  try {
+    const updatedWorker = await Worker.findByIdAndUpdate(
+      req.params.id,
+      { name, country, position, wages },
+      { new: true }
+    );
+    res.json(updatedWorker);
+  } catch (error) {
+    res.send("error");
+  }
+});
+
 router.delete("/deleteWorkerDetail/:id", async (req, res) => {
   try {
     const workers = await Worker.findByIdAndDelete(req.params.id);
