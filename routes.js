@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const Worker = require("./model");
 const { v4: uuidv4 } = require("uuid");
+
 router.get("/getWorkerDetail", async (req, res) => {
-  const { page = 1, limit = 5, search, country } = req.query;
+  const { page = 1, limit = 4, search, country } = req.query;
   try {
     const grouping = [];
     const filter = {};
@@ -39,7 +40,6 @@ router.get("/getWorkerDetail", async (req, res) => {
   }
 });
 
-
 router.get("/getWorkerDetail/:id", async (req, res) => {
   try {
     const workers = await Worker.findById(req.params.id);
@@ -56,10 +56,26 @@ router.post("/postWorkerDetail", async (req, res) => {
   });
   try {
     const workerSave = await workerPost.save();
+    const dataKeys = Object.keys(req.body);
+    console.log("Data keys:", dataKeys);
     res.json(workerSave);
   } catch (error) {
     res.send("error");
     console.log(error);
+  }
+});
+
+// Route to get all unique keys in the worker collection
+router.get("/workerKeys", async (req, res) => {
+  try {
+    const workers = await Worker.find();
+    const keys = [
+      ...new Set(workers.flatMap((worker) => Object.keys(worker.toObject()))),
+    ];
+    res.json(keys);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
@@ -75,6 +91,7 @@ router.patch("/patchWorkerDetail/:id", async (req, res) => {
     res.send("error");
   }
 });
+
 router.put("/updateWorkerDetail/:id", async (req, res) => {
   const { name, country, position, wages } = req.body;
   try {
